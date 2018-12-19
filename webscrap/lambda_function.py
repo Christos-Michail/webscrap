@@ -25,7 +25,7 @@ def lambda_handler(event, context):
     print("Received event: " + json.dumps(event, indent=2))
     # checks if the event received is for printing the program results
     try:
-        if(event['print']):
+        if event['print']:
             printResults()
             printUniqueResults()
     except KeyError:
@@ -38,13 +38,13 @@ def lambda_handler(event, context):
         pass
 # checks if the event is an api request from the endpoint -browser
     try:
-        if(event['request_type'] == 'browser'):
+        if event['request_type'] == 'browser':
             return browser(event['start_date'], event['end_date'])
     except KeyError:
         pass
 # checks if the event is an api request from the endpoint -os
     try:
-        if(event['request_type'] == 'os'):
+        if event['request_type'] == 'os':
             return os(event['start_date'], event['end_date'])
     except KeyError:
         pass
@@ -69,21 +69,22 @@ def savetoRDS(dictevents, key):
                     sql = """insert into Event (event_id, user_id, os,
                                                 browser, event_date)
                                                 values(%s,%s,%s,%s,%s)"""
-                    args = (tempid, str(event['user_id']), str(event['os']), 
+                    args = (tempid, str(event['user_id']), str(event['os']),
                             str(event['browser']), str(event['date']),)
                     cur.execute(sql, args)
                 print(len(dictevents['event']), ' rows added from file ', key)
                 conn.commit()
         except Exception as e:
-            print('Could not update database',e)
+            print('Could not update database', e)
     except Exception as e:
-        print('RDS connection failed',e)
+        print('RDS connection failed', e)
 
 
 # method to read and process the data from zip file
 def processFile(key):
-    s3 = boto3.client('s3', region_name = 'eu-west-2', aws_access_key_id = credentials.aws_access_key_id,
-                        aws_secret_access_key = credentials.aws_secret_access_key)
+    s3 = boto3.client('s3', region_name='eu-west-2',
+                      aws_access_key_id=credentials.aws_access_key_id,
+                      aws_secret_access_key=credentials.aws_secret_access_key)
     bucket = 'my-yi-bucket'
     countries = []
     cities = []
@@ -111,9 +112,7 @@ def processFile(key):
                     countries.append(ipdata[0])
                     cities.append(ipdata[1])
                     dictevents['event'].append({"os": os, "browser": browser,
-                    "user_id": user_id, "date": line[0], })
-                    # print(ipdata,'*******')
-                    # break
+                                                "user_id": user_id, "date": line[0], })
         # save to RDS the event data - all rows needed for part B
         savetoRDS(dictevents, key)
         # count countries and cities using collections
@@ -122,17 +121,17 @@ def processFile(key):
         # save the counts for each to Dynamo to keep sum
         savetoDynamo(countries_counted, 'countries', 'country')
         savetoDynamo(cities_counted, 'cities', 'city')
-    except Exception as e:
-        print(e)
-        raise e
+    except Exception as ExceptError:
+        print(ExceptError)
     print('File process finished ', key)
 
 
 # receives a dictionary of counted data , the dynamo table and the primary key
 # to save in appropriate place
 def savetoDynamo(counted, table_name, dykey):
-    dynamodb_client = boto3.resource('dynamodb', region_name = 'eu-west-2', aws_access_key_id = credentials.aws_access_key_id,
-                        aws_secret_access_key = credentials.aws_secret_access_key)
+    dynamodb_client = boto3.resource('dynamodb', region_name = 'eu-west-2',
+                                     aws_access_key_id = credentials.aws_access_key_id,
+                                     aws_secret_access_key = credentials.aws_secret_access_key)
     for key in counted:
         dynamodb_client.Table(table_name).update_item(
             TableName=table_name,
