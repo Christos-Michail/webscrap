@@ -36,7 +36,7 @@ def lambda_handler(event, context):
         process_file(key)
     except key_error:
         pass
-# checks if the event is an api request from the endpoint -browser
+# checks if the event is an api request from the endpoint browser
     try:
         if event['request_type'] == 'browser':
             return browser(event['start_date'], event['end_date'])
